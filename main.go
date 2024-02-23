@@ -108,7 +108,7 @@ func handler() error {
 }
 
 func main() {
-	if os.Getenv("AWS_EXECUTION_ENV") != "" {
+	if os.Getenv("AWS_LAMBDA_RUNTIME_API") != "" {
 		lambda.Start(handler)
 	} else {
 		err := handler()
@@ -116,6 +116,6 @@ func main() {
 			logger.Error(err.Error())
 		}
 	}
-
 	logger.Info("Ciao")
+	os.Exit(0)
 }
