@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -18,6 +18,7 @@ import (
 var (
 	TargetDomain = "www.scrapethissite.com"
 	TargetURL    = "https://www.scrapethissite.com/pages/simple/"
+	logger       = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 )
 
 type Country struct {
@@ -30,16 +31,17 @@ type DB struct {
 	table  string
 }
 
-func NewDB() *DB {
+func NewDB() (*DB, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+		return nil, err
 	}
 	dbClient := dynamodb.NewFromConfig(cfg)
 	return &DB{
 		client: dbClient,
 		table:  "Countries",
-	}
+	}, nil
 }
 
 func app(logger *slog.Logger) error {
@@ -73,7 +75,11 @@ func app(logger *slog.Logger) error {
 	logger.Info("Scraping Complete")
 
 	logger.Info("Setting Up DB Client")
-	db := NewDB()
+	db, err := NewDB()
+	if err != nil {
+		logger.Error(err.Error())
+		return err
+	}
 
 	itemList := []map[string]types.AttributeValue{}
 
@@ -87,6 +93,7 @@ func app(logger *slog.Logger) error {
 	}
 
 	logger.Info("Database Writes Start")
+	dbWriteStart := time.Now()
 	for i, item := range itemList {
 		logger.Info(fmt.Sprintf("Writing Item %v", i))
 		_, err = db.client.PutItem(context.TODO(), &dynamodb.PutItemInput{TableName: &db.table, Item: item})
@@ -96,12 +103,11 @@ func app(logger *slog.Logger) error {
 		}
 	}
 	logger.Info("Database Writes Complete")
+	logger.Info(fmt.Sprintf("Database writing took: %f seconds", time.Since(dbWriteStart).Seconds()))
 	return nil
 }
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 	if os.Getenv("AWS_EXECUTION_ENV") != "" {
 		lambda.Start(app(logger))
 	} else {
