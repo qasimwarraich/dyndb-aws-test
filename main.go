@@ -44,7 +44,7 @@ func NewDB() (*DB, error) {
 	}, nil
 }
 
-func app(logger *slog.Logger) error {
+func handler() error {
 	logger.Info("App Start")
 
 	countryList := []Country{}
@@ -109,9 +109,9 @@ func app(logger *slog.Logger) error {
 
 func main() {
 	if os.Getenv("AWS_EXECUTION_ENV") != "" {
-		lambda.Start(app(logger))
+		lambda.Start(handler)
 	} else {
-		err := app(logger)
+		err := handler()
 		if err != nil {
 			logger.Error(err.Error())
 		}
