@@ -6,7 +6,7 @@ build: clean
 	GOOS=linux GOARCH=amd64 go build -o build/bootstrap main.go
 	zip ./build/bootstrap.zip ./build/bootstrap
 
-deploy:
+deploy: build
 	cd infrastructure/ && tofu init && tofu apply
 
 clean: 
