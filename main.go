@@ -34,8 +34,7 @@ type DB struct {
 func NewDB() (*DB, error) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
-		logger.Error(err.Error())
-		return nil, err
+		return nil, fmt.Errorf("configuring aws db client: %w", err)
 	}
 	dbClient := dynamodb.NewFromConfig(cfg)
 	return &DB{
@@ -69,16 +68,14 @@ func handler() error {
 
 	err := c.Visit(TargetURL)
 	if err != nil {
-		logger.Error(err.Error())
-		return err
+		return fmt.Errorf("visiting target url: %w", err)
 	}
 	logger.Info("Scraping Complete")
 
 	logger.Info("Setting Up DB Client")
 	db, err := NewDB()
 	if err != nil {
-		logger.Error(err.Error())
-		return err
+		return fmt.Errorf("creating db client: %w", err)
 	}
 
 	itemList := []map[string]types.AttributeValue{}
@@ -86,8 +83,7 @@ func handler() error {
 	for _, country := range countryList {
 		item, errM := attributevalue.MarshalMap(country)
 		if errM != nil {
-			logger.Error(errM.Error())
-			return err
+			return fmt.Errorf("marshalling country into item: %w", err)
 		}
 		itemList = append(itemList, item)
 	}
@@ -98,8 +94,7 @@ func handler() error {
 		logger.Info(fmt.Sprintf("Writing Item %v", i))
 		_, err = db.client.PutItem(context.TODO(), &dynamodb.PutItemInput{TableName: &db.table, Item: item})
 		if err != nil {
-			logger.Error(err.Error())
-			return err
+			return fmt.Errorf("writing item %d: %w", i, err)
 		}
 	}
 	logger.Info("Database Writes Complete")
@@ -114,6 +109,7 @@ func main() {
 		err := handler()
 		if err != nil {
 			logger.Error(err.Error())
+			os.Exit(1)
 		}
 	}
 	logger.Info("Ciao")
