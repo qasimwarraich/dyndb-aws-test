@@ -9,7 +9,7 @@ resource "aws_lambda_function" "main" {
   role             = aws_iam_role.function_exec.arn
   runtime          = "provided.al2023"
   handler          = "bootstrap"
-  memory_size      = 512
+  memory_size      = 128
   timeout          = 28
   filename         = data.archive_file.go_lambda.output_path
   source_code_hash = data.archive_file.go_lambda.output_base64sha256
