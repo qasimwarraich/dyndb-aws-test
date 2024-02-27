@@ -19,6 +19,7 @@ var (
 	TargetDomain = "www.scrapethissite.com"
 	TargetURL    = "https://www.scrapethissite.com/pages/simple/"
 	logger       = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	db           = &DB{}
 )
 
 type Country struct {
@@ -44,11 +45,10 @@ func NewDB() (*DB, error) {
 }
 
 func handler() error {
-	logger.Info("App Start")
+	logger.Info("Handler Start")
 
 	countryList := []Country{}
 
-	logger.Info("Scraping Start")
 	c := colly.NewCollector(
 		colly.AllowedDomains(
 			TargetDomain,
@@ -66,20 +66,14 @@ func handler() error {
 		countryList = append(countryList, country)
 	})
 
+	logger.Info("Scraping Start")
 	err := c.Visit(TargetURL)
 	if err != nil {
 		return fmt.Errorf("visiting target url: %w", err)
 	}
 	logger.Info("Scraping Complete")
 
-	logger.Info("Setting Up DB Client")
-	db, err := NewDB()
-	if err != nil {
-		return fmt.Errorf("creating db client: %w", err)
-	}
-
 	itemList := []map[string]types.AttributeValue{}
-
 	for _, country := range countryList {
 		item, errM := attributevalue.MarshalMap(country)
 		if errM != nil {
@@ -100,10 +94,6 @@ func handler() error {
 	logger.Info("Database Writes Complete")
 	logger.Info(fmt.Sprintf("Database writing took: %f seconds", time.Since(dbWriteStart).Seconds()))
 
-
-	logger.Info("Database Reads Start")
-	dbReadsStart := time.Now()
-
 	itemList = []map[string]types.AttributeValue{}
 	for _, country := range countryList {
 		item, errM := attributevalue.Marshal(country.Name)
@@ -113,10 +103,11 @@ func handler() error {
 		itemList = append(itemList, map[string]types.AttributeValue{"Name": item})
 	}
 
+	logger.Info("Database Reads Start")
+	dbReadsStart := time.Now()
 	for i, item := range itemList {
 		logger.Info(fmt.Sprintf("Reading Item %v", i))
 		_, err := db.client.GetItem(context.TODO(), &dynamodb.GetItemInput{TableName: &db.table, Key: item})
-
 		if err != nil {
 			return fmt.Errorf("reading item %d: %w", i, err)
 		}
@@ -128,6 +119,15 @@ func handler() error {
 }
 
 func main() {
+	logger.Info("App Start")
+	logger.Info("Setting Up DB Client")
+	var err error
+	db, err = NewDB()
+	if err != nil {
+		logger.Error(fmt.Errorf("creating db client: %w", err).Error())
+		os.Exit(1)
+	}
+
 	if os.Getenv("AWS_LAMBDA_RUNTIME_API") != "" {
 		lambda.Start(handler)
 	} else {
