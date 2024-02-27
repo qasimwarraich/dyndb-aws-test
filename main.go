@@ -86,13 +86,18 @@ func handler() error {
 	dbWriteStart := time.Now()
 	for i, item := range itemList {
 		logger.Info(fmt.Sprintf("Writing Item %v", i))
-		_, err = db.client.PutItem(context.TODO(), &dynamodb.PutItemInput{TableName: &db.table, Item: item})
+		_, err = db.client.PutItem(
+			context.TODO(),
+			&dynamodb.PutItemInput{TableName: &db.table, Item: item},
+		)
 		if err != nil {
 			return fmt.Errorf("writing item %d: %w", i, err)
 		}
 	}
 	logger.Info("Database Writes Complete")
-	logger.Info(fmt.Sprintf("Database writing took: %f seconds", time.Since(dbWriteStart).Seconds()))
+	logger.Info(
+		fmt.Sprintf("Database writing took: %f seconds", time.Since(dbWriteStart).Seconds()),
+	)
 
 	itemList = []map[string]types.AttributeValue{}
 	for _, country := range countryList {
@@ -107,13 +112,18 @@ func handler() error {
 	dbReadsStart := time.Now()
 	for i, item := range itemList {
 		logger.Info(fmt.Sprintf("Reading Item %v", i))
-		_, err := db.client.GetItem(context.TODO(), &dynamodb.GetItemInput{TableName: &db.table, Key: item})
+		_, err := db.client.GetItem(
+			context.TODO(),
+			&dynamodb.GetItemInput{TableName: &db.table, Key: item},
+		)
 		if err != nil {
 			return fmt.Errorf("reading item %d: %w", i, err)
 		}
 	}
 	logger.Info("Database Reads Complete")
-	logger.Info(fmt.Sprintf("Database reading took: %f seconds", time.Since(dbReadsStart).Seconds()))
+	logger.Info(
+		fmt.Sprintf("Database reading took: %f seconds", time.Since(dbReadsStart).Seconds()),
+	)
 
 	return nil
 }
