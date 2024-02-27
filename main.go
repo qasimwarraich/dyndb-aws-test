@@ -99,6 +99,31 @@ func handler() error {
 	}
 	logger.Info("Database Writes Complete")
 	logger.Info(fmt.Sprintf("Database writing took: %f seconds", time.Since(dbWriteStart).Seconds()))
+
+
+	logger.Info("Database Reads Start")
+	dbReadsStart := time.Now()
+
+	itemList = []map[string]types.AttributeValue{}
+	for _, country := range countryList {
+		item, errM := attributevalue.Marshal(country.Name)
+		if errM != nil {
+			return fmt.Errorf("marshalling country into item: %w", err)
+		}
+		itemList = append(itemList, map[string]types.AttributeValue{"Name": item})
+	}
+
+	for i, item := range itemList {
+		logger.Info(fmt.Sprintf("Reading Item %v", i))
+		_, err := db.client.GetItem(context.TODO(), &dynamodb.GetItemInput{TableName: &db.table, Key: item})
+
+		if err != nil {
+			return fmt.Errorf("reading item %d: %w", i, err)
+		}
+	}
+	logger.Info("Database Reads Complete")
+	logger.Info(fmt.Sprintf("Database reading took: %f seconds", time.Since(dbReadsStart).Seconds()))
+
 	return nil
 }
 
