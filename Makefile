@@ -9,5 +9,8 @@ build: clean
 deploy: build
 	cd infrastructure/ && tofu init && tofu apply
 
+destroy: 
+	cd infrastructure/ && tofu init && tofu destroy
+
 clean: 
 	rm -rf build
